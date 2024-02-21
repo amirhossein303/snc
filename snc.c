@@ -6,6 +6,7 @@
 #include "snc.h"
 #include "client.h"
 #include "network.h"
+#include "server.h"
 
 #define PROGNAME "snc"
 #define PROGDESC "Secure Netcat"
@@ -143,7 +144,8 @@ int main(int argc, char **argv) {
 		printf("%s: missing port number, try --port, -p\n", PROGNAME);
 		exit(2);
 	}
-	flags.is_af_inet = is_ipv4(flags.host);
+
+	flags.is_af_inet = flags.host != NULL ? is_ipv4(flags.host) : 0;
 	if (!flags.listen_flag && !flags.is_af_inet && !is_domain_name(flags.host)) {
 		printf("%s: options --host is not a valid ip/domain, please enter valid ip/domain-name\n", PROGNAME);
 		exit(1);
@@ -157,7 +159,7 @@ int main(int argc, char **argv) {
 		if (!flags.is_af_inet &&
 			is_domain_name(flags.host) &&
 			resolve_domain_name(flags.host, addr) != 0) {
-			printf("%s: invalid host given, or could not resovle hostname\n", PROGNAME);
+			printf("%s: invalid host given, or could not resolve hostname\n", PROGNAME);
 			exit(1);
 		}
 
@@ -179,6 +181,26 @@ int main(int argc, char **argv) {
 				printf("%s: something went wrong\n", PROGNAME);
 		}
 	} else {
-		// Create socket and listen/bind
+		int server_fd;
+		switch (create_socket_server(flags.port, &server_fd)) {
+			case ERRNO_SOCKET_ERROR:
+				printf("%s: error in creating socket stream\n", PROGNAME);
+				break;
+			case ERRNO_SOCKETOPT:
+				printf("%s: error in set socket options\n", PROGNAME);
+				break;
+			case ERRNO_SOCKET_BIND:
+				printf("%s: could not bind to localhost\n", PROGNAME);
+				break;
+			case ERRNO_SOCKET_LISTEN:
+				printf("%s: could not listening\n", PROGNAME);
+				break;
+			case ERRNO_SOCKET_ACCEPT:
+				printf("%s: could not accept\n", PROGNAME);
+				break;
+			default:
+				printf("%s: something went wrong\n", PROGNAME);
+
+		}
 	}
 }
