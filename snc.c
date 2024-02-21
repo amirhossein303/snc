@@ -56,6 +56,24 @@ int isalldigit(char* num_as_string) {
 }
 
 
+int is_ipv4(char* host) {
+	char* token;
+	int o = 0;
+	char ahost[strlen(host)];
+	sprintf(ahost, host, strlen(host));
+	token = strtok(ahost, ".");
+	while (token != NULL) {
+		if (strlen(token) > 0 && isalldigit(token) && atoi(token) >= 0 && atoi(token) <= 255) {
+			o++;
+		} else {
+			return 0;
+		}
+		token = strtok(NULL, ".");
+	}
+	return o == 4;
+}
+
+
 int main(int argc, char **argv) {
 	int c;
 
@@ -88,6 +106,14 @@ int main(int argc, char **argv) {
 			printf("%s: try '%s --help' or '%s --h' for more information\n", PROGNAME, PROGNAME, PROGNAME);
 			exit(2);
 		}
+	}
+	if (!flags.listen_flag && flags.host == NULL) {
+		printf("%s: options --host is required while --listen not specified\n", PROGNAME);
+		exit(2);
+	}
+	if (flags.port == 0) {
+		printf("%s: options --port is required\n", PROGNAME);
+		exit(2);
 	}
 	printf("listen flag: %s\nhost: %s\nport: %d\n", (flags.listen_flag ? "yes" : "no"), flags.host, flags.port);
 }
