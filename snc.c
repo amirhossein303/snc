@@ -183,6 +183,8 @@ int main(int argc, char **argv) {
 	} else {
 		int server_fd;
 		switch (create_socket_server(flags.port, &server_fd)) {
+			case 0:
+				break;
 			case ERRNO_SOCKET_ERROR:
 				printf("%s: error in creating socket stream\n", PROGNAME);
 				break;
