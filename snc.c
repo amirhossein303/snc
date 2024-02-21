@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <ctype.h>
 
 #include "snc.h"
 
@@ -56,11 +57,11 @@ int isalldigit(char* num_as_string) {
 }
 
 
-int is_ipv4(char* host) {
+int is_ipv4(char* buf) {
 	char* token;
 	int o = 0;
-	char ahost[strlen(host)];
-	sprintf(ahost, host, strlen(host));
+	char ahost[strlen(buf)];
+	sprintf(ahost, buf, strlen(buf));
 	token = strtok(ahost, ".");
 	while (token != NULL) {
 		if (strlen(token) > 0 && isalldigit(token) && atoi(token) >= 0 && atoi(token) <= 255) {
@@ -71,6 +72,27 @@ int is_ipv4(char* host) {
 		token = strtok(NULL, ".");
 	}
 	return o == 4;
+}
+
+
+int is_domain_name(char* buf) {
+	char c;
+	int i = 0;
+	int dots = 0;
+	if (strcmp(buf, "localhost") == 0) {
+		return 1;
+	}
+	while ((c = *(buf++)) != '\0') {
+		if ((i != 0 && c == '.') || isdigit(c) || isalpha(c) || c == '-') {
+			if (c == '.') {
+				dots++;
+			}
+			i++;
+			continue;
+		}
+		return 0;
+	}
+	return 1 && dots>0;
 }
 
 
@@ -108,12 +130,16 @@ int main(int argc, char **argv) {
 		}
 	}
 	if (!flags.listen_flag && flags.host == NULL) {
-		printf("%s: options --host is required while --listen not specified\n", PROGNAME);
+		printf("%s: missing host, try --host, -H\n", PROGNAME);
 		exit(2);
 	}
 	if (flags.port == 0) {
-		printf("%s: options --port is required\n", PROGNAME);
+		printf("%s: missing port number, try --port, -p\n", PROGNAME);
 		exit(2);
+	}
+	if (!flags.listen_flag && !is_ipv4(flags.host) && !is_domain_name(flags.host)) {
+		printf("%s: options --host is not a valid ip/domain, please enter valid ip/domain-name\n", PROGNAME);
+		exit(1);
 	}
 	printf("listen flag: %s\nhost: %s\nport: %d\n", (flags.listen_flag ? "yes" : "no"), flags.host, flags.port);
 }
