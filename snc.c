@@ -4,6 +4,8 @@
 #include <ctype.h>
 
 #include "snc.h"
+#include "client.h"
+#include "network.h"
 
 #define PROGNAME "snc"
 #define PROGDESC "Secure Netcat"
@@ -12,7 +14,8 @@
 Flags flags = {
 	.listen_flag=0,
 	.port=0,
-	.host=NULL
+	.host=NULL,
+	.is_af_inet=0,
 };
 
 
@@ -98,7 +101,10 @@ int is_domain_name(char* buf) {
 
 int main(int argc, char **argv) {
 	int c;
-
+	if (argc == 1) {
+		help();
+		exit(2);
+	}
 	for (argc--, argv++; argc; argv++, argc--) {
 		if ((strcmp(*argv, "-h") == 0) || strcmp(*argv, "--help") == 0) {
 			help();
@@ -137,9 +143,42 @@ int main(int argc, char **argv) {
 		printf("%s: missing port number, try --port, -p\n", PROGNAME);
 		exit(2);
 	}
-	if (!flags.listen_flag && !is_ipv4(flags.host) && !is_domain_name(flags.host)) {
+	flags.is_af_inet = is_ipv4(flags.host);
+	if (!flags.listen_flag && !flags.is_af_inet && !is_domain_name(flags.host)) {
 		printf("%s: options --host is not a valid ip/domain, please enter valid ip/domain-name\n", PROGNAME);
 		exit(1);
 	}
-	printf("listen flag: %s\nhost: %s\nport: %d\n", (flags.listen_flag ? "yes" : "no"), flags.host, flags.port);
+
+	if (!flags.listen_flag) {
+		// Connect to specific host:port
+		char addr[IPV4_LENGTH];
+		strcpy(addr, flags.is_af_inet?flags.host:"");
+
+		if (!flags.is_af_inet &&
+			is_domain_name(flags.host) &&
+			resolve_domain_name(flags.host, addr) != 0) {
+			printf("%s: invalid host given, or could not resovle hostname\n", PROGNAME);
+			exit(1);
+		}
+
+		int client_fd;
+		switch (socket_client_connect(addr, flags.port, &client_fd)) {
+			case 0:
+				printf("%s: connection established sucessfully\n", PROGNAME);
+				break;
+			case ERRNO_SOCKET_ERROR:
+				printf("%s: error in creating socket stream\n", PROGNAME);
+				break;
+			case ERRNO_CONNECTION_FAILED:
+				printf("%s: could not connect to '%s:%d'\n", PROGNAME, addr, flags.port);
+				break;
+			case ERRNO_INVALID_ADDR:
+				printf("%s: address is invalid\n", PROGNAME);
+				break;
+			default:
+				printf("%s: something went wrong\n", PROGNAME);
+		}
+	} else {
+		// Create socket and listen/bind
+	}
 }

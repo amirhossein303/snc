@@ -9,5 +9,6 @@ int is_domain_name(char*);
 typedef struct {
 	int listen_flag;
 	char* host;
-	int port; 
+	int port;
+	int is_af_inet;
 } Flags;
