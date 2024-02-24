@@ -166,19 +166,19 @@ int main(int argc, char **argv) {
 		int client_fd;
 		switch (socket_client_connect(addr, flags.port, &client_fd)) {
 			case 0:
-				printf("%s: connection established sucessfully\n", PROGNAME);
+				perror("connection established sucessfully");
 				break;
 			case ERRNO_SOCKET_ERROR:
-				printf("%s: error in creating socket stream\n", PROGNAME);
+				perror("error in creating socket stream");
 				break;
 			case ERRNO_CONNECTION_FAILED:
-				printf("%s: could not connect to '%s:%d'\n", PROGNAME, addr, flags.port);
+				perror("could not connect");
 				break;
 			case ERRNO_INVALID_ADDR:
-				printf("%s: address is invalid\n", PROGNAME);
+				perror("address is invalid");
 				break;
 			default:
-				printf("%s: something went wrong\n", PROGNAME);
+				perror("something went wrong");
 		}
 	} else {
 		int server_fd;
@@ -186,23 +186,22 @@ int main(int argc, char **argv) {
 			case 0:
 				break;
 			case ERRNO_SOCKET_ERROR:
-				printf("%s: error in creating socket stream\n", PROGNAME);
+				perror("error in creating socket stream");
 				break;
 			case ERRNO_SOCKETOPT:
-				printf("%s: error in set socket options\n", PROGNAME);
+				perror("error in set socket options");
 				break;
 			case ERRNO_SOCKET_BIND:
-				printf("%s: could not bind to localhost\n", PROGNAME);
+				perror("could not bind to localhost");
 				break;
 			case ERRNO_SOCKET_LISTEN:
-				printf("%s: could not listening\n", PROGNAME);
+				perror("could not listening");
 				break;
 			case ERRNO_SOCKET_ACCEPT:
-				printf("%s: could not accept\n", PROGNAME);
+				perror("could not accept");
 				break;
 			default:
-				printf("%s: something went wrong\n", PROGNAME);
-
+				perror("something went wrong");
 		}
 	}
 }
