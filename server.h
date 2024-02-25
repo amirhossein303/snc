@@ -37,5 +37,6 @@ int create_socket_server(int port, int* server_fd, int* client_fd) {
 	if ((*client_fd = accept(*server_fd, (struct sockaddr*)&address, &addrlen)) < 0) {
 		return ERRNO_SOCKET_ACCEPT;
 	}
+	printf("Connection received\n");
 	return 0;
 }

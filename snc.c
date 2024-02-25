@@ -129,9 +129,9 @@ void* stream_reader(void* streamfd) {
 
 
 void close_connection() {
-	write(stream_id, "Connection closed\n", 18);
 	close(socketfd);
 	close(stream_id);
+	printf("\n");
 	exit(0);
 }
 
