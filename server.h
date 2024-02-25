@@ -9,9 +9,8 @@
 #define MAX_NUMBER_CLIENT 2
 
 
-int create_socket_server(int port, int* server_fd) {
+int create_socket_server(int port, int* server_fd, int* client_fd) {
 	struct sockaddr_in address;
-	int new_socket;
 	int opt = 1;
 
 	socklen_t addrlen = sizeof(address);
@@ -35,7 +34,7 @@ int create_socket_server(int port, int* server_fd) {
 	}
 	printf("Listening on 0.0.0.0 %d\n", port);
 
-	if ((new_socket = accept(*server_fd, (struct sockaddr*)&address, &addrlen)) < 0) {
+	if ((*client_fd = accept(*server_fd, (struct sockaddr*)&address, &addrlen)) < 0) {
 		return ERRNO_SOCKET_ACCEPT;
 	}
 	return 0;

@@ -2,6 +2,9 @@
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
+#include <pthread.h>
+#include <unistd.h>
+#include <signal.h>
 
 #include "snc.h"
 #include "client.h"
@@ -11,6 +14,7 @@
 #define PROGNAME "snc"
 #define PROGDESC "Secure Netcat"
 #define VERSION "1.0.0"
+#define BUFSIZE 1024
 
 Flags flags = {
 	.listen_flag=0,
@@ -19,6 +23,8 @@ Flags flags = {
 	.is_af_inet=0,
 };
 
+
+int socketfd, stream_id;
 
 void help(void) {
 	printf("Usage: %s [--version] [--help] [--port <PORT>] [--host <IP/Domain>] [--listen]\n", PROGNAME);
@@ -100,8 +106,40 @@ int is_domain_name(char* buf) {
 }
 
 
+void* stream_writer(void* streamfd) {
+	char line[BUFSIZE];
+	int* fd = (int*)streamfd;
+	while (fgets(line, BUFSIZE, stdin) != NULL) {
+		write(*fd, line, strlen(line));
+	}
+}
+
+void* stream_reader(void* streamfd) {
+	char line[BUFSIZE];
+	ssize_t valread;
+	int* fd = (int*)streamfd;
+	while (1) {
+		valread = read(*fd, line, BUFSIZE);
+		if (valread) {
+			fputs(line, stdout);
+			memset(line, 0, BUFSIZE);
+		}
+	}
+}
+
+
+void close_connection() {
+	write(stream_id, "Connection closed\n", 18);
+	close(socketfd);
+	close(stream_id);
+	exit(0);
+}
+
+
 int main(int argc, char **argv) {
-	int c;
+	int c, succeed;
+	pthread_t writer_thread_id, reader_thread_id;
+
 	if (argc == 1) {
 		help();
 		exit(2);
@@ -151,6 +189,7 @@ int main(int argc, char **argv) {
 		exit(1);
 	}
 
+	signal(SIGINT, close_connection);
 	if (!flags.listen_flag) {
 		// Connect to specific host:port
 		char addr[IPV4_LENGTH];
@@ -162,11 +201,10 @@ int main(int argc, char **argv) {
 			printf("%s: invalid host given, or could not resolve hostname\n", PROGNAME);
 			exit(1);
 		}
-
-		int client_fd;
-		switch (socket_client_connect(addr, flags.port, &client_fd)) {
+		// Client
+		switch (socket_client_connect(addr, flags.port, &stream_id)) {
 			case 0:
-				perror("connection established sucessfully");
+				succeed = 1;
 				break;
 			case ERRNO_SOCKET_ERROR:
 				perror("error in creating socket stream");
@@ -180,10 +218,19 @@ int main(int argc, char **argv) {
 			default:
 				perror("something went wrong");
 		}
+		if (!succeed) {
+			exit(1);
+		}
+		pthread_create(&writer_thread_id, NULL, stream_writer, (void*)&stream_id);
+		pthread_create(&reader_thread_id, NULL, stream_reader, (void*)&stream_id);
+
+		pthread_join(writer_thread_id, NULL);
+		pthread_join(reader_thread_id, NULL);
 	} else {
-		int server_fd;
-		switch (create_socket_server(flags.port, &server_fd)) {
+		// Server
+		switch (create_socket_server(flags.port, &socketfd, &stream_id)) {
 			case 0:
+				succeed = 1;
 				break;
 			case ERRNO_SOCKET_ERROR:
 				perror("error in creating socket stream");
@@ -203,5 +250,15 @@ int main(int argc, char **argv) {
 			default:
 				perror("something went wrong");
 		}
+		if (!succeed) {
+			exit(1);
+		}
+
+		pthread_create(&writer_thread_id, NULL, stream_writer, (void*)&stream_id);
+		pthread_create(&reader_thread_id, NULL, stream_reader, (void*)&stream_id);
+
+		pthread_join(writer_thread_id, NULL);
+		pthread_join(reader_thread_id, NULL);
 	}
+
 }
